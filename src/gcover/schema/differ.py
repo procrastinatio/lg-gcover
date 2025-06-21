@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
-from typing import Dict, List, Set, Tuple, Any, Optional, Union
 from enum import Enum
+from typing import Any, Optional, Union
 
 from loguru import logger
 
@@ -21,7 +21,7 @@ class FieldChange:
     change_type: ChangeType
     old_value: Optional[Any] = None
     new_value: Optional[Any] = None
-    property_changes: Dict[str, Tuple[Any, Any]] = field(default_factory=dict)
+    property_changes: dict[str, tuple[Any, Any]] = field(default_factory=dict)
 
 
 @dataclass
@@ -32,8 +32,8 @@ class DomainChange:
     change_type: ChangeType
     old_domain: Optional[Union["CodedDomain", "RangeDomain"]] = None
     new_domain: Optional[Union["CodedDomain", "RangeDomain"]] = None
-    coded_value_changes: Dict[str, ChangeType] = field(default_factory=dict)
-    property_changes: Dict[str, Tuple[Any, Any]] = field(default_factory=dict)
+    coded_value_changes: dict[str, ChangeType] = field(default_factory=dict)
+    property_changes: dict[str, tuple[Any, Any]] = field(default_factory=dict)
 
 
 @dataclass
@@ -44,8 +44,8 @@ class TableChange:
     change_type: ChangeType
     old_table: Optional[Union["Table", "FeatureClass"]] = None
     new_table: Optional[Union["Table", "FeatureClass"]] = None
-    field_changes: List[FieldChange] = field(default_factory=list)
-    property_changes: Dict[str, Tuple[Any, Any]] = field(default_factory=dict)
+    field_changes: list[FieldChange] = field(default_factory=list)
+    property_changes: dict[str, tuple[Any, Any]] = field(default_factory=dict)
 
 
 @dataclass
@@ -56,7 +56,7 @@ class RelationshipChange:
     change_type: ChangeType
     old_relationship: Optional["RelationshipClass"] = None
     new_relationship: Optional["RelationshipClass"] = None
-    property_changes: Dict[str, Tuple[Any, Any]] = field(default_factory=dict)
+    property_changes: dict[str, tuple[Any, Any]] = field(default_factory=dict)
 
 
 @dataclass
@@ -67,8 +67,8 @@ class SubtypeChange:
     change_type: ChangeType
     old_subtype: Optional["Subtype"] = None
     new_subtype: Optional["Subtype"] = None
-    value_changes: Dict[str, ChangeType] = field(default_factory=dict)
-    property_changes: Dict[str, Tuple[Any, Any]] = field(default_factory=dict)
+    value_changes: dict[str, ChangeType] = field(default_factory=dict)
+    property_changes: dict[str, tuple[Any, Any]] = field(default_factory=dict)
 
 
 class SchemaDiff:
@@ -88,11 +88,11 @@ class SchemaDiff:
         self.new_schema = new_schema
 
         # Storage for all changes
-        self.domain_changes: List[DomainChange] = []
-        self.table_changes: List[TableChange] = []
-        self.feature_class_changes: List[TableChange] = []
-        self.relationship_changes: List[RelationshipChange] = []
-        self.subtype_changes: List[SubtypeChange] = []
+        self.domain_changes: list[DomainChange] = []
+        self.table_changes: list[TableChange] = []
+        self.feature_class_changes: list[TableChange] = []
+        self.relationship_changes: list[RelationshipChange] = []
+        self.subtype_changes: list[SubtypeChange] = []
 
         self.metadata = {}  # TODO
 
@@ -387,8 +387,8 @@ class SchemaDiff:
         return None
 
     def _compare_fields(
-        self, old_fields: List["Field"], new_fields: List["Field"]
-    ) -> List[FieldChange]:
+        self, old_fields: list["Field"], new_fields: list["Field"]
+    ) -> list[FieldChange]:
         """Compare two lists of fields"""
         field_changes = []
 
@@ -604,7 +604,7 @@ class SchemaDiff:
             or self.subtype_changes
         )
 
-    def get_summary(self) -> Dict[str, Dict[str, int]]:
+    def get_summary(self) -> dict[str, dict[str, int]]:
         """Get a summary of all changes by type"""
         summary = {
             "domains": self._summarize_changes(self.domain_changes),
@@ -615,7 +615,7 @@ class SchemaDiff:
         }
         return summary
 
-    def _summarize_changes(self, changes: List) -> Dict[str, int]:
+    def _summarize_changes(self, changes: list) -> dict[str, int]:
         """Summarize a list of changes by type"""
         summary = {"added": 0, "removed": 0, "modified": 0}
 
@@ -724,12 +724,11 @@ class SchemaDiff:
 
 
 def main():
-    import os
-    import sys
     import json
-    from transform_esri_json import transform_esri_json
+    import os
 
     from export_schema_diff import export_schema_diff_to_json
+    from transform_esri_json import transform_esri_json
 
     diff_pairs = [
         {
@@ -769,9 +768,9 @@ def main():
         if not os.path.isdir(output_dir):
             os.makedirs(output_dir)
 
-        with open(old_schema_path, "r") as f:
+        with open(old_schema_path) as f:
             old_esri_json_data = json.loads(f.read())
-        with open(new_schema_path, "r") as f:
+        with open(new_schema_path) as f:
             new_esri_json_data = json.loads(f.read())
         old_schema = transform_esri_json(
             old_esri_json_data, filter_prefix=FILTER_PREFIX
@@ -796,7 +795,7 @@ def main():
                     print(f"Domain {change.domain_name} was modified")
 
             for change in diff.table_changes:
-                print(f"  ")
+                print("  ")
                 print(f"Table {change.table_name}: {change.change_type}")
                 for field in change.field_changes:
                     print(f"  {field.field_name}: {field.change_type}")
@@ -806,21 +805,22 @@ def main():
         print(f"Total domain changes: {sum(summary['domains'].values())}")
 
         diff_data = export_schema_diff_to_json(diff)
-        schema_diff_json_path = os.path.join(output_dir, f"schema-diff.json")
+        schema_diff_json_path = os.path.join(output_dir, "schema-diff.json")
         logger.info(f"Saving the diff (from deepdiff) to {schema_diff_json_path}")
         with open(schema_diff_json_path, "w", encoding="utf-8") as f:
             json.dump(diff_data, f, ensure_ascii=False, indent=4)
 
         # Generate report
-        from jinja2 import Template
         import json
+
+        from jinja2 import Template
 
         # Generate diff
         # diff = SchemaDiff(old_schema, new_schema)
         # diff_data = export_schema_diff_to_json(diff)
 
         # Load template
-        with open("templates/schema_diff_template.md.j2", "r") as f:
+        with open("templates/schema_diff_template.md.j2") as f:
             template = Template(f.read())
 
         # Render markdown
@@ -838,7 +838,7 @@ def main():
             f.write(html)
 
         # Load and render the template
-        with open("templates/schema_diff_template.html.j2", "r") as f:
+        with open("templates/schema_diff_template.html.j2") as f:
             template = Template(f.read())
 
         html_output = template.render(**diff_data)

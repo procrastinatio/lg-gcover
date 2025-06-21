@@ -2,10 +2,11 @@
 Transformer for converting ESRI JSON schema reports to ESRISchema objects.
 """
 
-import json
 import sys
 import traceback
-from typing import Any, Dict, List, Union
+from typing import Any, Union
+
+from loguru import logger
 
 # Import the dataclasses from the previous artifact
 from .models import (
@@ -21,15 +22,14 @@ from .models import (
     SubtypeValue,
     Table,
 )
-from loguru import logger
 
 logger.remove()  # remove the old handler. Else, the old one will work along with the new one you've added below'
 logger.add(sys.stderr, level="INFO")
 
 
 def remove_prefix_from_name(
-    text: Union[str, List[str]], prefix: str = "TOPGIS_GC."
-) -> Union[str, List[str]]:
+    text: Union[str, list[str]], prefix: str = "TOPGIS_GC."
+) -> Union[str, list[str]]:
     """
     Remove a prefix from a string or list of strings while preserving the original type.
 
@@ -54,11 +54,11 @@ def remove_prefix_from_name(
 
 
 def transform_esri_json(
-    input_data: Dict[str, Any],
+    input_data: dict[str, Any],
     filter_prefix: str = "TOPGIS_GC.GC_",
     exclude_metadata_fields: bool = True,
     remove_prefix: bool = False,
-    add_prefix_to_gdb: bool =False
+    add_prefix_to_gdb: bool = False,
 ) -> ESRISchema:
     """
     Transform ESRI JSON format into ESRISchema dataclass.
@@ -121,7 +121,7 @@ def transform_esri_json(
             return False
         return True
 
-    def filter_field_data(field_data: Dict[str, Any]) -> bool:
+    def filter_field_data(field_data: dict[str, Any]) -> bool:
         """Check if a field should be imported"""
         if exclude_metadata_fields and field_data.get("name") in EXCLUDED_FIELDS:
             return False
@@ -132,8 +132,10 @@ def transform_esri_json(
             return f"{prefix}{name}"
         return name
 
-    if remove_prefix and not (filter_prefix is None or filter_prefix == ''):
-        raise Exception(f"With remove_prefix, you must set a filter_prefix: {filter_prefix}")
+    if remove_prefix and not (filter_prefix is None or filter_prefix == ""):
+        raise Exception(
+            f"With remove_prefix, you must set a filter_prefix: {filter_prefix}"
+        )
 
     schema = ESRISchema()
 
@@ -327,7 +329,7 @@ def transform_esri_json(
     return schema
 
 
-def create_field_from_data(field_data: Dict[str, Any]) -> Field:
+def create_field_from_data(field_data: dict[str, Any]) -> Field:
     """Create a Field instance from field data dictionary"""
     return Field(
         name=field_data.get("name", ""),
@@ -343,7 +345,7 @@ def create_field_from_data(field_data: Dict[str, Any]) -> Field:
 
 
 def create_table_from_data(
-    table_name: str, table_data: Union[Dict[str, Any], List[Dict[str, Any]]]
+    table_name: str, table_data: Union[dict[str, Any], list[dict[str, Any]]]
 ) -> Table:
     """Create a Table instance from table data dictionary"""
     table = Table(
@@ -417,7 +419,7 @@ def create_table_from_data(
 
 
 def create_feature_class_from_data(
-    fc_name: str, fc_data: Dict[str, Any]
+    fc_name: str, fc_data: dict[str, Any]
 ) -> FeatureClass:
     """Create a FeatureClass instance from feature class data dictionary"""
     fc = FeatureClass(
@@ -462,7 +464,7 @@ def create_feature_class_from_data(
 
 
 def create_relationship_from_data(
-    rel_name: str, rel_data: Dict[str, Any]
+    rel_name: str, rel_data: dict[str, Any]
 ) -> RelationshipClass:
     """Create a RelationshipClass instance from relationship data dictionary"""
     # Handle origin and destination - they come as lists in your format
@@ -522,7 +524,7 @@ def create_relationship_from_data(
 
 
 def create_subtype_from_data(
-    subtype_name: str, subtype_data: Dict[str, Any]
+    subtype_name: str, subtype_data: dict[str, Any]
 ) -> Subtype:
     """Create a Subtype instance from subtype data dictionary"""
     subtype = Subtype(
@@ -883,7 +885,7 @@ def main():
         BASE_DIR = "/home/marco/code/github.com/lg-geology-data-model/exports/"
     old_json_path = os.path.join(BASE_DIR, "2025_05_26/GCOVERP.json")
 
-    with open(old_json_path, "r") as f:
+    with open(old_json_path) as f:
         esri_json_data = json.loads(f.read())
     schema = transform_esri_json(esri_json_data, exclude_metadata_fields=False)
     logger.info(f"Loaded {len(schema.feature_classes)} feature classes")

@@ -1,10 +1,10 @@
-import click
-from pathlib import Path
 import json
-from typing import Optional
-from ..schema import extract_schema, transform_esri_json, SchemaDiff
+from pathlib import Path
+
+import click
+
+from ..schema import SchemaDiff, extract_schema, transform_esri_json
 from ..schema.exporters.plantuml import generate_plantuml_from_schema
-from ..schema.exporters.json import export_esri_schema_to_json
 
 
 @click.group()
@@ -14,19 +14,24 @@ def schema():
 
 
 @schema.command()
-@click.argument('source', type=click.Path(exists=True))
-@click.option('--output', '-o', type=click.Path(), help='Output directory')
-@click.option('--name', '-n', help='Report name')
-@click.option('--format', '-f', multiple=True, default=['json'],
-              type=click.Choice(['json', 'html', 'xml']))
-@click.option('--filter-prefix', help='Filter tables by prefix')
-@click.option('--remove-prefix/--keep-prefix', default=False)
+@click.argument("source", type=click.Path(exists=True))
+@click.option("--output", "-o", type=click.Path(), help="Output directory")
+@click.option("--name", "-n", help="Report name")
+@click.option(
+    "--format",
+    "-f",
+    multiple=True,
+    default=["json"],
+    type=click.Choice(["json", "html", "xml"]),
+)
+@click.option("--filter-prefix", help="Filter tables by prefix")
+@click.option("--remove-prefix/--keep-prefix", default=False)
 def extract(source, output, name, format, filter_prefix, remove_prefix):
     """Extract schema from GDB or SDE connection."""
     from ..utils.imports import HAS_ARCPY
 
     if not HAS_ARCPY:
-        click.secho("❌ This command requires arcpy", fg='red')
+        click.secho("❌ This command requires arcpy", fg="red")
         raise click.Abort()
 
     click.echo(f"Extracting schema from {source}...")
@@ -36,7 +41,7 @@ def extract(source, output, name, format, filter_prefix, remove_prefix):
             source=source,
             output_dir=Path(output) if output else None,
             name=name,
-            formats=list(format)
+            formats=list(format),
         )
 
         # Appliquer les filtres si spécifiés
@@ -44,26 +49,26 @@ def extract(source, output, name, format, filter_prefix, remove_prefix):
             # Filtrer le schéma...
             pass
 
-        click.secho("✅ Schema extracted successfully", fg='green')
+        click.secho("✅ Schema extracted successfully", fg="green")
 
     except Exception as e:
-        click.secho(f"❌ Error: {e}", fg='red')
+        click.secho(f"❌ Error: {e}", fg="red")
         raise click.Abort()
 
 
 @schema.command()
-@click.argument('json_file', type=click.Path(exists=True))
-@click.option('--output', '-o', required=True, help='Output PlantUML file')
-@click.option('--title', default='Database Schema')
-@click.option('--no-fields', is_flag=True, help='Exclude field details')
-@click.option('--no-relationships', is_flag=True, help='Exclude relationships')
-@click.option('--filter', '-f', multiple=True, help='Include only these tables')
+@click.argument("json_file", type=click.Path(exists=True))
+@click.option("--output", "-o", required=True, help="Output PlantUML file")
+@click.option("--title", default="Database Schema")
+@click.option("--no-fields", is_flag=True, help="Exclude field details")
+@click.option("--no-relationships", is_flag=True, help="Exclude relationships")
+@click.option("--filter", "-f", multiple=True, help="Include only these tables")
 def diagram(json_file, output, title, no_fields, no_relationships, filter):
     """Generate PlantUML diagram from schema JSON."""
     click.echo(f"Generating diagram from {json_file}...")
 
     # Charger le JSON
-    with open(json_file, 'r') as f:
+    with open(json_file) as f:
         data = json.load(f)
 
     # Transformer en ESRISchema
@@ -75,28 +80,29 @@ def diagram(json_file, output, title, no_fields, no_relationships, filter):
         title=title,
         include_fields=not no_fields,
         include_relationships=not no_relationships,
-        filter_tables=list(filter) if filter else None
+        filter_tables=list(filter) if filter else None,
     )
 
     # Sauvegarder
     Path(output).write_text(puml_content)
-    click.secho(f"✅ Diagram saved to {output}", fg='green')
+    click.secho(f"✅ Diagram saved to {output}", fg="green")
 
 
 @schema.command()
-@click.argument('old_schema', type=click.Path(exists=True))
-@click.argument('new_schema', type=click.Path(exists=True))
-@click.option('--output', '-o', help='Output file for diff report')
-@click.option('--format', type=click.Choice(['json', 'html', 'markdown']),
-              default='json')
+@click.argument("old_schema", type=click.Path(exists=True))
+@click.argument("new_schema", type=click.Path(exists=True))
+@click.option("--output", "-o", help="Output file for diff report")
+@click.option(
+    "--format", type=click.Choice(["json", "html", "markdown"]), default="json"
+)
 def diff(old_schema, new_schema, output, format):
     """Compare two schemas and generate diff report."""
     click.echo("Comparing schemas...")
 
     # Charger les schémas
-    with open(old_schema, 'r') as f:
+    with open(old_schema) as f:
         old_data = json.load(f)
-    with open(new_schema, 'r') as f:
+    with open(new_schema) as f:
         new_data = json.load(f)
 
     # Transformer
@@ -115,34 +121,39 @@ def diff(old_schema, new_schema, output, format):
 
     # Sauvegarder si demandé
     if output:
-        if format == 'json':
+        if format == "json":
             from ..schema.exporters import export_schema_diff_to_json
+
             result = export_schema_diff_to_json(diff)
             Path(output).write_text(json.dumps(result, indent=2))
-        elif format == 'html':
+        elif format == "html":
             # Générer HTML
             pass
-        elif format == 'markdown':
+        elif format == "markdown":
             # Générer Markdown
             pass
 
-        click.secho(f"✅ Diff report saved to {output}", fg='green')
+        click.secho(f"✅ Diff report saved to {output}", fg="green")
 
 
 @schema.command()
-@click.argument('schema_file', type=click.Path(exists=True))
-@click.option('--template', '-t',
-              type=click.Choice(['datamodel', 'summary', 'full']),
-              default='datamodel')
-@click.option('--output', '-o', required=True, help='Output file')
-@click.option('--format', type=click.Choice(['html', 'markdown', 'pdf']),
-              default='html')
+@click.argument("schema_file", type=click.Path(exists=True))
+@click.option(
+    "--template",
+    "-t",
+    type=click.Choice(["datamodel", "summary", "full"]),
+    default="datamodel",
+)
+@click.option("--output", "-o", required=True, help="Output file")
+@click.option(
+    "--format", type=click.Choice(["html", "markdown", "pdf"]), default="html"
+)
 def report(schema_file, template, output, format):
     """Generate documentation from schema."""
     click.echo(f"Generating {template} report...")
 
     # Charger le schéma
-    with open(schema_file, 'r') as f:
+    with open(schema_file) as f:
         data = json.load(f)
 
     schema = transform_esri_json(data)
@@ -150,11 +161,7 @@ def report(schema_file, template, output, format):
     # Générer le rapport selon le template
     from ..schema.reporter import generate_report
 
-    report_content = generate_report(
-        schema=schema,
-        template=template,
-        format=format
-    )
+    report_content = generate_report(schema=schema, template=template, format=format)
 
     Path(output).write_text(report_content)
-    click.secho(f"✅ Report saved to {output}", fg='green')
+    click.secho(f"✅ Report saved to {output}", fg="green")

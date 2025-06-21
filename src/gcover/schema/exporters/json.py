@@ -1,6 +1,4 @@
-from dataclasses import dataclass, field
-from typing import Dict, List, Any, Optional, Union
-
+from typing import Any
 
 from ..models import ESRISchema
 
@@ -26,7 +24,7 @@ def convert_field_type(esri_type):
     return type_mapping.get(esri_type, esri_type)
 
 
-def export_esri_schema_to_json(schema: ESRISchema, version: int = 2) -> Dict[str, Any]:
+def export_esri_schema_to_json(schema: ESRISchema, version: int = 2) -> dict[str, Any]:
     """
     Export ESRISchema instance to JSON format matching the original structure.
 
@@ -42,7 +40,6 @@ def export_esri_schema_to_json(schema: ESRISchema, version: int = 2) -> Dict[str
     # Add metadata if available
     if schema.metadata:
         result["metadata"] = schema.metadata
-
 
     # Export coded domains
     if schema.coded_domains:
